@@ -23,10 +23,10 @@ object BeexploreMain {
   )
 
   private def cellToColor(cell: BeexploreCell): Color = {
-    val hue = 0.11f
-    val saturation = 0.69f
+    val hue = 0.15f
+    val saturation = 0.8f
     //val luminance = cell.algae.value.floatValue()
-    val luminance = cell.bees.size / 10f
+    val luminance = cell.bees.size
     Color.getHSBColor(hue, saturation, luminance)
   }
 
