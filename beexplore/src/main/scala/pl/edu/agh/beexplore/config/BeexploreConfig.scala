@@ -39,5 +39,8 @@ final case class BeexploreConfig(
                                  workersRoot: Int,
                                  iterationsNumber: Long,
                                  isSupervisor: Boolean,
-                                 shardingMod: Int
+                                 shardingMod: Int,
+                                 beeColonyCoordinateX: Int,
+                                 beeColonyCoordinateY: Int,
+                                 beeNumber: Int
                                ) extends XinukConfig

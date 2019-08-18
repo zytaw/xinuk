@@ -4,7 +4,7 @@ import java.awt.Color
 
 import pl.edu.agh.beexplore.algorithm.BeexploreMovesController
 import pl.edu.agh.beexplore.config.BeexploreConfig
-import pl.edu.agh.beexplore.model.BeexploreCell
+import pl.edu.agh.beexplore.model.{BeeColony, BeexploreCell}
 import pl.edu.agh.beexplore.model.parallel.BeexploreConflictResolver
 import pl.edu.agh.xinuk.Simulation
 import pl.edu.agh.xinuk.model.DefaultSmellPropagation
@@ -25,8 +25,14 @@ object BeexploreMain {
   private def cellToColor(cell: BeexploreCell): Color = {
     val hue = 0.15f
     val saturation = 0.8f
-    //val luminance = cell.algae.value.floatValue()
     val luminance = cell.bees.size
+    Color.getHSBColor(hue, saturation, luminance)
+  }
+
+  private def colonyCellToColor(cell: BeeColony): Color = {
+    val hue = 0.01f
+    val saturation = 1f
+    val luminance = 0.5f + cell.bees.size/100
     Color.getHSBColor(hue, saturation, luminance)
   }
 
@@ -40,7 +46,10 @@ object BeexploreMain {
       BeexploreCell.create()
     )(
         new BeexploreMovesController(_)(_),
-      { case cell: BeexploreCell => cellToColor(cell) }
+      {
+        case cell: BeexploreCell => cellToColor(cell)
+        case cell: BeeColony => colonyCellToColor(cell)
+      }
     ).start()
   }
 }
