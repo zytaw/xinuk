@@ -3,12 +3,13 @@ package pl.edu.agh.beexplore.algorithm
 import com.avsystem.commons._
 import com.avsystem.commons.misc.Opt
 import pl.edu.agh.beexplore.config.BeexploreConfig
+import pl.edu.agh.beexplore.model
 import pl.edu.agh.beexplore.model.{Bee, BeeColony, BeexploreCell, Id}
 import pl.edu.agh.beexplore.simulation.BeexploreMetrics
 import pl.edu.agh.xinuk.algorithm.MovesController
 import pl.edu.agh.xinuk.model.{BufferCell, Cell, EmptyCell, Energy, Grid, GridPart, Obstacle, Signal, SmellingCell}
-import util.control.Breaks._
 
+import util.control.Breaks._
 import scala.collection.immutable.TreeSet
 import scala.util.Random
 
@@ -25,9 +26,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
 //    coordinates are not absolute, now they're for each node
 //    to calculate absoluteCoords, probably will need sth like absoluteX = x + nodeId(horizontally) * gridSize
     grid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) = BeeColony.create(Vector.fill(config.beeNumber)(Bee.create()))
-
-//    def getRandomElement(list: Seq[(Int, Int)], random: Random):
-//    (Int, Int) = list(random.nextInt(list.length))
 
     for (i:Int <- 0 until config.flowerPatchNumber) {
       print("generating flowerPatch ", i)
@@ -58,9 +56,9 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
             newX = x + nextFlower._1
             newY = y + nextFlower._2
 
-            if (grid.cells(newX)(newY).asInstanceOf[BeexploreCell].flowerPatch == Id.Start
+            if (grid.cells(newX)(newY)!= Obstacle
+              && grid.cells(newX)(newY).asInstanceOf[BeexploreCell].flowerPatch == Id.Start
               && !grid.cells(newX)(newY).isInstanceOf[BeeColony]
-              && grid.cells(newX)(newY)!= Obstacle
             ) {
               grid.cells(newX)(newY) = BeexploreCell(Cell.emptySignal, Vector.empty, Id(i))
               x = newX
@@ -214,9 +212,23 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         newY = 13
       }
 
+      this.grid.cells(x)(y) match {
+        case BeexploreCell(_, _, flowerPatch) => {
+          if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch)) {
+//            TODO use immutable maps ?
+            bee.discoveredFlowerPatches += flowerPatch -> (newX, newY)
+          }
+        }
+        case BeeColony(_, _, bees, visitedCoords, discoveredFlowerPatchCoords) => {
+          println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
+        }
+        case _ =>
+      }
+
       val updatedBee = bee.copy(
         energy = bee.energy - config.foraminiferaLifeActivityCost,
-        lifespan = bee.lifespan + 1
+        lifespan = bee.lifespan + 1,
+        discoveredFlowerPatches = bee.discoveredFlowerPatches
       )
 
       val destination = Iterator(((newX, newY), updatedBee))

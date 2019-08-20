@@ -43,6 +43,7 @@ final case class BeexploreConfig(
                                  beeColonyCoordinateX: Int,
                                  beeColonyCoordinateY: Int,
                                  beeNumber: Int,
+                                 beeTripDuration: Long,
                                  flowerPatchSizeMin: Int,
                                  flowerPatchSizeMax: Int,
                                  flowerPatchNumber: Int
