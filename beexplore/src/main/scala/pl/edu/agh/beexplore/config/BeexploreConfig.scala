@@ -46,5 +46,6 @@ final case class BeexploreConfig(
                                  beeTripDuration: Long,
                                  flowerPatchSizeMin: Int,
                                  flowerPatchSizeMax: Int,
-                                 flowerPatchNumber: Int
+                                 flowerPatchNumber: Int,
+                                 beeSearchMode: Int
                                ) extends XinukConfig

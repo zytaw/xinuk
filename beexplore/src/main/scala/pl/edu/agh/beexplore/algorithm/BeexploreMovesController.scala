@@ -57,8 +57,8 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
             newY = y + nextFlower._2
 
             if (grid.cells(newX)(newY)!= Obstacle
-              && grid.cells(newX)(newY).asInstanceOf[BeexploreCell].flowerPatch == Id.Start
               && !grid.cells(newX)(newY).isInstanceOf[BeeColony]
+              && grid.cells(newX)(newY).asInstanceOf[BeexploreCell].flowerPatch == Id.Start
             ) {
               grid.cells(newX)(newY) = BeexploreCell(Cell.emptySignal, Vector.empty, Id(i))
               x = newX
@@ -141,7 +141,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
               )
             ) {
               case ((currentCellResult, pendingMoves), bee) =>
-                val action = moveBee(bee, x, y, pendingMoves)
+                val action = moveBeeRandomly(bee, x, y, pendingMoves)
                 //                only 1 move in moves iterator
                 action.moves.foreach {
                   case ((x, y), movingBee) =>
@@ -167,7 +167,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
               )
           ) {
               case ((currentCellResult, pendingMoves, runningFlowerPatch), bee) =>
-                val action = moveBee(bee, x, y, pendingMoves)
+                val action = moveBeeRandomly(bee, x, y, pendingMoves)
 //                only 1 move in moves iterator
                 action.moves.foreach {
                   case ((x, y), movingBee) =>
@@ -199,7 +199,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
                                 moves: Iterator[((Int, Int), Bee)] = Iterator.empty
                               )
 
-    def moveBee(bee: Bee, x: Int, y: Int, moves: BMap[(Int, Int), Stream[Bee]]): BeeAction = {
+    def moveBeeRandomly(bee: Bee, x: Int, y: Int, moves: BMap[(Int, Int), Stream[Bee]]): BeeAction = {
 
       var newX = x + random.nextInt(3) - 1
       var newY = y + random.nextInt(3) - 1
@@ -212,27 +212,61 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         newY = 13
       }
 
-      this.grid.cells(x)(y) match {
-        case BeexploreCell(_, _, flowerPatch) => {
-          if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch)) {
-//            TODO use immutable maps ?
-            bee.discoveredFlowerPatches += flowerPatch -> (newX, newY)
+      def getUpdatedBee (cell: GridPart, bee: Bee): Bee = {
+        var maxTripDuration = bee.maxTripDuration - 1
+        var discoveredFlowerPatches = bee.discoveredFlowerPatches
+        var destination = bee.destination
+
+         cell match {
+          case BeexploreCell(_, _, flowerPatch) => {
+            println("[BEE] discoveredFlowerPatches: ", bee.discoveredFlowerPatches, " maxTripDuration: ", maxTripDuration, " destination: ", destination)
+            if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch)) {
+              discoveredFlowerPatches += flowerPatch -> (newX, newY)
+            }
+            if (maxTripDuration == 0) {
+              destination = (config.beeColonyCoordinateX, config.beeColonyCoordinateY)
+            }
           }
+
+          case BeeColony(_, _, bees, visitedCoords, discoveredFlowerPatchCoords) => {
+            println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
+            //          newest coord for each flowerPatch are kept in BeeColony (since potentially the environment could dynamically change)
+            discoveredFlowerPatchCoords ++= bee.discoveredFlowerPatches
+            discoveredFlowerPatches.clear
+            maxTripDuration = config.beeTripDuration
+
+            config.beeSearchMode match {
+              case 1 =>
+                destination = (-1, -1)
+              case 2 => {
+                val possibleDestinations = discoveredFlowerPatchCoords.values.toList
+                destination = possibleDestinations(random.nextInt(possibleDestinations.length))
+              }
+            }
+            println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, " bee: ", bee.discoveredFlowerPatches, "destination: ", destination)
+          }
+
+          case _ =>
         }
-        case BeeColony(_, _, bees, visitedCoords, discoveredFlowerPatchCoords) => {
-          println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
-          discoveredFlowerPatchCoords ++= bee.discoveredFlowerPatches
-          bee.discoveredFlowerPatches.clear
-          println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, " bee: ", bee.discoveredFlowerPatches)
-        }
-        case _ =>
+
+        bee.copy(
+          energy = bee.energy - config.foraminiferaLifeActivityCost,
+//          energy = bee.energy - config.beeMoveCost,
+          maxTripDuration,
+          discoveredFlowerPatches,
+          destination
+        )
       }
 
-      val updatedBee = bee.copy(
-        energy = bee.energy - config.foraminiferaLifeActivityCost,
-        lifespan = bee.lifespan + 1,
-        discoveredFlowerPatches = bee.discoveredFlowerPatches
-      )
+      val updatedBee = getUpdatedBee(this.grid.cells(x)(y), bee)
+
+      //      val updatedBee = bee.copy(
+//        energy = bee.energy - config.foraminiferaLifeActivityCost,
+//        maxTripDuration = bee.maxTripDuration - 1,
+//        discoveredFlowerPatches = bee.discoveredFlowerPatches
+//      )
+
+
 
       val destination = Iterator(((newX, newY), updatedBee))
 
