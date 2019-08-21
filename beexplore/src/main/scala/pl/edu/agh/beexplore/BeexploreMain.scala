@@ -55,7 +55,7 @@ object BeexploreMain {
         new BeexploreMovesController(_)(_),
       {
         case cell: BeexploreCell =>
-          if (cell.flowerPatch != Id.Start) flowerPatchCellToColor(cell)
+          if (cell.flowerPatch != Id.Start && cell.bees.isEmpty) flowerPatchCellToColor(cell)
           else cellToColor(cell)
         case cell: BeeColony => colonyCellToColor(cell)
       }
