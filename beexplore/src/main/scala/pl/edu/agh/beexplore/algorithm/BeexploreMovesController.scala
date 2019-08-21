@@ -221,6 +221,9 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         }
         case BeeColony(_, _, bees, visitedCoords, discoveredFlowerPatchCoords) => {
           println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
+          discoveredFlowerPatchCoords ++= bee.discoveredFlowerPatches
+          bee.discoveredFlowerPatches.clear
+          println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, " bee: ", bee.discoveredFlowerPatches)
         }
         case _ =>
       }

@@ -1,5 +1,6 @@
 package pl.edu.agh.beexplore.model
 
+import com.avsystem.commons.MMap
 import pl.edu.agh.beexplore.config.BeexploreConfig
 import pl.edu.agh.xinuk.model.Cell.SmellArray
 import pl.edu.agh.xinuk.model.{Cell, Energy, SmellingCell}
@@ -9,7 +10,7 @@ final case class BeeColony(
                             smell: SmellArray,
                             bees: Vector[Bee],
                             visitedCoords: Vector[(Int, Int)],
-                            discoveredFlowerPatchCoords: Vector[(Int, Int)],
+                            discoveredFlowerPatchCoords: collection.mutable.Map[Id, (Int, Int)]
                           ) extends SmellingCell {
   override type Self = BeeColony
 
@@ -25,6 +26,6 @@ object BeeColony {
     Cell.emptySignal,
     bees,
     Vector.empty,
-    Vector.empty
+    MMap.empty[Id, (Int, Int)]
   )
 }
