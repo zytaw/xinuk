@@ -10,7 +10,8 @@ final case class BeeColony(
                             smell: SmellArray,
                             bees: Vector[Bee],
                             visitedCoords: Vector[(Int, Int)],
-                            discoveredFlowerPatchCoords: collection.mutable.Map[Id, (Int, Int)]
+                            discoveredFlowerPatchCoords: collection.mutable.Map[Id, (Int, Int)],
+                            discoveredFlowerPatchMetrics: collection.mutable.Map[Id, Int]
                           ) extends SmellingCell {
   override type Self = BeeColony
 
@@ -26,6 +27,7 @@ object BeeColony {
     Cell.emptySignal,
     bees,
     Vector.empty,
-    MMap.empty[Id, (Int, Int)]
+    MMap.empty[Id, (Int, Int)],
+    MMap.empty[Id, Int]
   )
 }

@@ -135,7 +135,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         case BufferCell(BeexploreCell(smell, _, _)) =>
           update(x, y)(cell => cell.copy(smell = cell.smell + smell))
 
-        case BeeColony(_, smell, bees, visitedCoords, discoveredFlowerPatchCoords) => {
+        case BeeColony(_, smell, bees, visitedCoords, discoveredFlowerPatchCoords, _) => {
           val (newBees: Iterator[Bee], moves: BMap[(Int, Int), Stream[Bee]]) =
             bees.foldLeft(
               (
@@ -215,8 +215,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         newY = 1
       }
 
-      println("randomX ", newX, "randomY ", newY)
-
       (newX, newY)
     }
 
@@ -224,7 +222,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
       val newX = x + signum(destination._1 - x)
       val newY = y + signum(destination._2 - y)
 
-      println("desX ", newX, "desY ", newY)
+//      println("desX ", newX, "desY ", newY)
       (newX, newY)
     }
 
@@ -244,7 +242,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
 
          cell match {
           case BeexploreCell(_, _, flowerPatch) => {
-            println("[BEE] discoveredFlowerPatches: ", bee.discoveredFlowerPatches, " maxTripDuration: ", maxTripDuration, " destination: ", destination)
+//            println("[BEE] discoveredFlowerPatches: ", bee.discoveredFlowerPatches, " maxTripDuration: ", maxTripDuration, " destination: ", destination)
             if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch)) {
               discoveredFlowerPatches += flowerPatch -> (newX, newY)
             }
@@ -253,10 +251,18 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
             }
           }
 
-          case BeeColony(_, _, bees, visitedCoords, discoveredFlowerPatchCoords) => {
-            println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
+          case BeeColony(_, _, bees, visitedCoords, discoveredFlowerPatchCoords, discoveredFlowerPatchMetrics) => {
+//            println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
             //          newest coord for each flowerPatch are kept in BeeColony (since potentially the environment could dynamically change)
             discoveredFlowerPatchCoords ++= bee.discoveredFlowerPatches
+            for ((id, _) <- bee.discoveredFlowerPatches) {
+              if (discoveredFlowerPatchMetrics.contains(id)){
+                discoveredFlowerPatchMetrics(id) = discoveredFlowerPatchMetrics(id) + 1
+              }
+              else
+                discoveredFlowerPatchMetrics(id) = 1
+            }
+
             discoveredFlowerPatches.clear
             maxTripDuration = config.beeTripDuration
 
@@ -268,7 +274,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
                 destination = possibleDestinations(random.nextInt(possibleDestinations.length))
               }
             }
-            println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, " bee: ", bee.discoveredFlowerPatches, "destination: ", destination)
+            println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics, " bee: ", bee.discoveredFlowerPatches, "destination: ", destination)
           }
 
           case _ =>
