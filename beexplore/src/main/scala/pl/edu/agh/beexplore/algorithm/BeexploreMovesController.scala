@@ -12,6 +12,7 @@ import pl.edu.agh.xinuk.model.{BufferCell, Cell, EmptyCell, Energy, Grid, GridPa
 import util.control.Breaks._
 import scala.collection.immutable.TreeSet
 import scala.util.Random
+import scala.math.signum
 
 class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
                               (implicit config: BeexploreConfig) extends MovesController {
@@ -108,6 +109,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         case cell: BeexploreCell => updated(cell)
         case cell: BeeColony => cell
         case BufferCell(cell: BeexploreCell) => BufferCell(updated(cell))
+        case Obstacle => Obstacle
       }
     }
 
@@ -121,6 +123,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         case cell: BeexploreCell => cell
         case cell: BeeColony => updatedColony(cell)
         case BufferCell(cell: BeexploreCell) => cell
+        case Obstacle => Obstacle
       }
     }
 
@@ -141,7 +144,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
               )
             ) {
               case ((currentCellResult, pendingMoves), bee) =>
-                val action = moveBeeRandomly(bee, x, y, pendingMoves)
+                val action = moveBee(bee, x, y, pendingMoves)
                 //                only 1 move in moves iterator
                 action.moves.foreach {
                   case ((x, y), movingBee) =>
@@ -167,7 +170,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
               )
           ) {
               case ((currentCellResult, pendingMoves, runningFlowerPatch), bee) =>
-                val action = moveBeeRandomly(bee, x, y, pendingMoves)
+                val action = moveBee(bee, x, y, pendingMoves)
 //                only 1 move in moves iterator
                 action.moves.foreach {
                   case ((x, y), movingBee) =>
@@ -199,17 +202,39 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
                                 moves: Iterator[((Int, Int), Bee)] = Iterator.empty
                               )
 
-    def moveBeeRandomly(bee: Bee, x: Int, y: Int, moves: BMap[(Int, Int), Stream[Bee]]): BeeAction = {
-
+    def randomMoveCoords (x: Int, y: Int): (Int, Int) = {
       var newX = x + random.nextInt(3) - 1
       var newY = y + random.nextInt(3) - 1
+
       if (grid.cells(newX)(newY) == Obstacle){
         newX = x
         newY = y
       }
-      else if (newX == 0 && newY == 0){
-        newX = 13
-        newY = 13
+      else if (newX == 0 && newY == 0) {
+        newX = 1
+        newY = 1
+      }
+
+      println("randomX ", newX, "randomY ", newY)
+
+      (newX, newY)
+    }
+
+    def desiredMoveCoords (x: Int, y: Int, destination: (Int, Int)): (Int, Int) = {
+      val newX = x + signum(destination._1 - x)
+      val newY = y + signum(destination._2 - y)
+
+      println("desX ", newX, "desY ", newY)
+      (newX, newY)
+    }
+
+    def moveBee(bee: Bee, x: Int, y: Int, moves: BMap[(Int, Int), Stream[Bee]]): BeeAction = {
+
+      val (newX, newY) = bee.destination match {
+        case (-1, -1) =>
+          randomMoveCoords(x, y)
+        case _ =>
+          desiredMoveCoords(x, y, bee.destination)
       }
 
       def getUpdatedBee (cell: GridPart, bee: Bee): Bee = {
@@ -258,15 +283,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         )
       }
 
-      val updatedBee = getUpdatedBee(this.grid.cells(x)(y), bee)
-
-      //      val updatedBee = bee.copy(
-//        energy = bee.energy - config.foraminiferaLifeActivityCost,
-//        maxTripDuration = bee.maxTripDuration - 1,
-//        discoveredFlowerPatches = bee.discoveredFlowerPatches
-//      )
-
-
+      val updatedBee = getUpdatedBee(this.grid.cells(newX)(newY), bee)
 
       val destination = Iterator(((newX, newY), updatedBee))
 
