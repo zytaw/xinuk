@@ -245,7 +245,10 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
 //            println("[BEE] discoveredFlowerPatches: ", bee.discoveredFlowerPatches, " maxTripDuration: ", maxTripDuration, " destination: ", destination)
             if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch)) {
               discoveredFlowerPatches += flowerPatch -> (newX, newY)
-              if (bee.discoveredFlowerPatches.valuesIterator.contains(bee.destination))
+              if (bee.destination != (-1, -1)
+                && bee.destination != (config.beeColonyCoordinateX, config.beeColonyCoordinateY)
+                && flowerPatch == grid.cells(bee.destination._1)(bee.destination._2).asInstanceOf[BeexploreCell].flowerPatch
+              )
                 destination = (-1, -1)
             }
             if (maxTripDuration == 0) {
@@ -273,7 +276,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
                 destination = (-1, -1)
               case 2 => {
                 val possibleDestinations = discoveredFlowerPatchCoords.values.toList
-                if (possibleDestinations.length > 0)
+                if (possibleDestinations.nonEmpty)
                   destination = possibleDestinations(random.nextInt(possibleDestinations.length))
                 else
                   destination = (-1, -1)
