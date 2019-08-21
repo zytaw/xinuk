@@ -245,6 +245,8 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
 //            println("[BEE] discoveredFlowerPatches: ", bee.discoveredFlowerPatches, " maxTripDuration: ", maxTripDuration, " destination: ", destination)
             if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch)) {
               discoveredFlowerPatches += flowerPatch -> (newX, newY)
+              if (bee.discoveredFlowerPatches.valuesIterator.contains(bee.destination))
+                destination = (-1, -1)
             }
             if (maxTripDuration == 0) {
               destination = (config.beeColonyCoordinateX, config.beeColonyCoordinateY)
@@ -271,7 +273,10 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
                 destination = (-1, -1)
               case 2 => {
                 val possibleDestinations = discoveredFlowerPatchCoords.values.toList
-                destination = possibleDestinations(random.nextInt(possibleDestinations.length))
+                if (possibleDestinations.length > 0)
+                  destination = possibleDestinations(random.nextInt(possibleDestinations.length))
+                else
+                  destination = (-1, -1)
               }
             }
             println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics, " bee: ", bee.discoveredFlowerPatches, "destination: ", destination)
