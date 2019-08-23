@@ -100,7 +100,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
     def update(x: Int, y: Int)(op: BeexploreCell => BeexploreCell): Unit = {
       def updated(cell: BeexploreCell): BeexploreCell = {
         val afterOp = op(cell)
-        val smellAdjustment = (config.foraminiferaInitialSignal * afterOp.bees.size) + (config.algaeSignalMultiplier * afterOp.flowerPatch.value)
+        val smellAdjustment = (config.beeInitialSignal * afterOp.bees.size) + (config.flowerPatchSignalMultiplier * afterOp.flowerPatch.value)
         afterOp.copy(smell = afterOp.smell)
         afterOp.copy(flowerPatch = afterOp.flowerPatch)
       }
@@ -289,7 +289,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         }
 
         bee.copy(
-          energy = bee.energy - config.foraminiferaLifeActivityCost,
+          energy = bee.energy - config.beeLifeActivityCost,
 //          energy = bee.energy - config.beeMoveCost,
           maxTripDuration,
           discoveredFlowerPatches,

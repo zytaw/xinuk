@@ -20,20 +20,13 @@ ASSV - algae start signal value; ASSV ∈ [0,1] && ASSV ∈ R.
  */
 
 final case class BeexploreConfig(
-                                 foraminiferaStartEnergy: Energy,
-                                 foraminiferaReproductionCost: Energy,
-                                 foraminiferaReproductionThreshold: Energy,
-                                 foraminiferaLifeActivityCost: Energy,
-                                 algaeStartEnergy: Energy,
-                                 algaeRegenerationRate: Double,
-                                 algaeEnergeticCapacity: Energy,
+                                 beeLifeActivityCost: Energy,
+                                 beeStartEnergy: Energy,
                                  signalSpeedRatio: Int,
                                  signalSuppressionFactor: Double,
                                  signalAttenuationFactor: Double,
                                  gridSize: Int,
-                                 foraminiferaSpawnChance: Double,
-                                 foraminiferaInitialSignal: Signal,
-                                 algaeSignalMultiplier: Signal,
+                                 beeInitialSignal: Signal,
                                  guiType: GuiType,
                                  guiCellSize: Int,
                                  workersRoot: Int,
@@ -47,5 +40,6 @@ final case class BeexploreConfig(
                                  flowerPatchSizeMin: Int,
                                  flowerPatchSizeMax: Int,
                                  flowerPatchNumber: Int,
+                                 flowerPatchSignalMultiplier: Signal,
                                  beeSearchMode: Int
                                ) extends XinukConfig

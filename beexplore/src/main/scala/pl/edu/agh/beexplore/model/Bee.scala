@@ -17,7 +17,7 @@ object Bee {
 //  private val random = new Random(System.nanoTime())
   def create()(implicit config: BeexploreConfig):
   Bee = Bee(
-    config.foraminiferaStartEnergy,
+    config.beeStartEnergy,
     config.beeTripDuration,
     MMap.empty[Id, (Int, Int)],
 //    (random.nextInt(config.gridSize) - 1, random.nextInt(config.gridSize) - 1)
