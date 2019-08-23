@@ -37,7 +37,7 @@ object BeexploreMain {
   }
 
   private def flowerPatchCellToColor(cell: BeexploreCell): Color = {
-    val hue = 0.25f
+    val hue = 0.25f + (0.01f * cell.flowerPatch.value)
     val saturation = 1f
     val luminance = 0.5f
     Color.getHSBColor(hue, saturation, luminance)
@@ -52,7 +52,7 @@ object BeexploreMain {
       DefaultSmellPropagation.calculateSmellAddendsStandard,
       BeexploreCell.create()
     )(
-        new BeexploreMovesController(_)(_),
+        new BeexploreMovesController(_, _)(_),
       {
         case cell: BeexploreCell =>
           if (cell.flowerPatch != Id.Start && cell.bees.isEmpty) flowerPatchCellToColor(cell)

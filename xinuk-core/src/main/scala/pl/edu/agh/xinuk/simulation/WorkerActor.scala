@@ -16,7 +16,7 @@ import scala.collection.mutable
 
 class WorkerActor[ConfigType <: XinukConfig](
                                               regionRef: => ActorRef,
-                                              movesControllerFactory: (TreeSet[(Int, Int)], ConfigType) => MovesController,
+                                              movesControllerFactory: (TreeSet[(Int, Int)], WorkerId, ConfigType) => MovesController,
                                               conflictResolver: ConflictResolver[ConfigType],
                                               smellPropagationFunction: (CellArray, Int, Int) => Vector[Option[Signal]],
                                               emptyCellFactory: => SmellingCell = EmptyCell.Instance)(implicit config: ConfigType) extends Actor with Stash {
@@ -60,7 +60,7 @@ class WorkerActor[ConfigType <: XinukConfig](
       this.logger = LoggerFactory.getLogger(id.value.toString)
       this.neighbours = neighbours.mkMap(_.position.neighbourId(id).get, identity)
       this.bufferZone = neighbours.foldLeft(TreeSet.empty[(Int, Int)])((builder, neighbour) => builder | neighbour.position.bufferZone)
-      this.movesController = movesControllerFactory(bufferZone, config)
+      this.movesController = movesControllerFactory(bufferZone, id, config)
       grid = Grid.empty(bufferZone)
       logger.info(s"${id.value} neighbours: ${neighbours.map(_.position).toList}")
       self ! StartIteration(1)
@@ -171,7 +171,7 @@ object WorkerActor {
 
   def props[ConfigType <: XinukConfig](
                                         regionRef: => ActorRef,
-                                        movesControllerFactory: (TreeSet[(Int, Int)], ConfigType) => MovesController,
+                                        movesControllerFactory: (TreeSet[(Int, Int)], WorkerId, ConfigType) => MovesController,
                                         conflictResolver: ConflictResolver[ConfigType],
                                         smellPropagationFunction: (CellArray, Int, Int) => Vector[Option[Signal]],
                                         emptyCellFactory: => SmellingCell = EmptyCell.Instance

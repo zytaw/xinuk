@@ -7,14 +7,14 @@ import pl.edu.agh.beexplore.model
 import pl.edu.agh.beexplore.model.{Bee, BeeColony, BeexploreCell, Id}
 import pl.edu.agh.beexplore.simulation.BeexploreMetrics
 import pl.edu.agh.xinuk.algorithm.MovesController
-import pl.edu.agh.xinuk.model.{BufferCell, Cell, EmptyCell, Energy, Grid, GridPart, Obstacle, Signal, SmellingCell}
+import pl.edu.agh.xinuk.model.{BufferCell, Cell, EmptyCell, Energy, Grid, GridPart, Obstacle, Signal, SmellingCell, WorkerId}
 
 import util.control.Breaks._
 import scala.collection.immutable.TreeSet
 import scala.util.Random
 import scala.math.signum
 
-class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
+class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: WorkerId)
                               (implicit config: BeexploreConfig) extends MovesController {
   import Cell._
 
@@ -22,14 +22,15 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
   private val random = new Random(System.nanoTime())
 
   override def initialGrid: (Grid, BeexploreMetrics) = {
+    println("[WORKER INIT] ", workerId)
     grid = Grid.empty(bufferZone, BeexploreCell(Cell.emptySignal, Vector.empty, Id.Start))
 
 //    coordinates are not absolute, now they're for each node
 //    to calculate absoluteCoords, probably will need sth like absoluteX = x + nodeId(horizontally) * gridSize
-    grid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) = BeeColony.create(Vector.fill(config.beeNumber)(Bee.create()))
+    if (workerId.value == config.beeColonyWorkerId)
+      grid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) = BeeColony.create(Vector.fill(config.beeNumber)(Bee.create()))
 
     for (i:Int <- 0 until config.flowerPatchNumber) {
-      print("generating flowerPatch ", i)
       var x = random.nextInt(config.gridSize - 3) + 1  // TODO for now we don't want flower patches on bufferCell
       var y = random.nextInt(config.gridSize - 3) + 1
 
@@ -41,10 +42,12 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
         x = random.nextInt(config.gridSize - 3) + 1
         y = random.nextInt(config.gridSize - 3) + 1
       }
-      grid.cells(x)(y) = BeexploreCell(Cell.emptySignal, Vector.empty, Id(i))
+
+      val flowerPatchId = (workerId.value - 1) * config.flowerPatchNumber + i
+      grid.cells(x)(y) = BeexploreCell(Cell.emptySignal, Vector.empty, Id(flowerPatchId))
 
       val flowerPatchSize = random.nextInt(config.flowerPatchSizeMax - config.flowerPatchSizeMin) + config.flowerPatchSizeMin
-      println(" | flowerpatch size: ", flowerPatchSize)
+      println("generating flowerPatch ", flowerPatchId, " | flowerpatch size: ", flowerPatchSize)
 
       for (j:Int <- 0 until flowerPatchSize) {
         val possibleNextFlower = Iterator(Random.shuffle(List((-1, 0), (0, -1), (0, 1), (1, 0)))).flatten
@@ -64,7 +67,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
               && !cell.isInstanceOf[BeeColony]
               && cell.asInstanceOf[BeexploreCell].flowerPatch == Id.Start
             ) {
-              grid.cells(newX)(newY) = BeexploreCell(Cell.emptySignal, Vector.empty, Id(i))
+              grid.cells(newX)(newY) = BeexploreCell(Cell.emptySignal, Vector.empty, Id(flowerPatchId))
               x = newX
               y = newY
               break
@@ -95,6 +98,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
 
     newGrid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) = grid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) match {
                   case cell: BeeColony => cell.copy(bees = Vector.empty)
+                  case cell: BeexploreCell => cell.copy(bees = Vector.empty)
                 }
 
     def update(x: Int, y: Int)(op: BeexploreCell => BeexploreCell): Unit = {
@@ -222,7 +226,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
       val newX = x + signum(destination._1 - x)
       val newY = y + signum(destination._2 - y)
 
-//      println("desX ", newX, "desY ", newY)
       (newX, newY)
     }
 
@@ -242,14 +245,16 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
 
          cell match {
           case BeexploreCell(_, _, flowerPatch) => {
-//            println("[BEE] discoveredFlowerPatches: ", bee.discoveredFlowerPatches, " maxTripDuration: ", maxTripDuration, " destination: ", destination)
             if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch)) {
               discoveredFlowerPatches += flowerPatch -> (newX, newY)
               if (bee.destination != (-1, -1)
-                && bee.destination != (config.beeColonyCoordinateX, config.beeColonyCoordinateY)
+                && (bee.destination != (config.beeColonyCoordinateX, config.beeColonyCoordinateY) || workerId.value != config.beeColonyWorkerId)
                 && flowerPatch == grid.cells(bee.destination._1)(bee.destination._2).asInstanceOf[BeexploreCell].flowerPatch
               )
                 destination = (-1, -1)
+//              if (bee.destination == (config.beeColonyCoordinateX, config.beeColonyCoordinateY)
+//              && workerId.value != config.beeColonyWorkerId)
+//                destination = (-1, -1)
             }
             if (maxTripDuration == 0) {
               destination = (config.beeColonyCoordinateX, config.beeColonyCoordinateY)
@@ -282,7 +287,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
                   destination = (-1, -1)
               }
             }
-            println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics, " bee: ", bee.discoveredFlowerPatches, "destination: ", destination)
+//            println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics, " bee: ", bee.discoveredFlowerPatches, "destination: ", destination)
           }
 
           case _ =>

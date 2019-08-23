@@ -35,6 +35,7 @@ final case class BeexploreConfig(
                                  shardingMod: Int,
                                  beeColonyCoordinateX: Int,
                                  beeColonyCoordinateY: Int,
+                                 beeColonyWorkerId: Int,
                                  beeNumber: Int,
                                  beeTripDuration: Long,
                                  flowerPatchSizeMin: Int,
