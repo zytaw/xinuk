@@ -222,43 +222,42 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       (newX, newY)
     }
 
-    def desiredMoveCoords (x: Int, y: Int, destination: (Int, Int)): (Int, Int) = {
-      val newX = x + signum(destination._1 - x)
-      val newY = y + signum(destination._2 - y)
-
+    def desiredMoveCoords (x: Int, y: Int, destination: (Int, Int), vectorFromColony: (Int, Int)): (Int, Int) = {
+      val newX = x + signum(destination._1 - vectorFromColony._1)
+      val newY = y + signum(destination._2 - vectorFromColony._2)
       (newX, newY)
     }
 
     def moveBee(bee: Bee, x: Int, y: Int, moves: BMap[(Int, Int), Stream[Bee]]): BeeAction = {
 
       val (newX, newY) = bee.destination match {
-        case (-1, -1) =>
+        case (Int.MinValue, Int.MinValue) =>
           randomMoveCoords(x, y)
         case _ =>
-          desiredMoveCoords(x, y, bee.destination)
+          desiredMoveCoords(x, y, bee.destination, bee.vectorFromColony)
       }
 
       def getUpdatedBee (cell: GridPart, bee: Bee): Bee = {
+        val moveVectorX = newX - x
+        val moveVectorY = newY - y
+
+        var destination = bee.destination
         var maxTripDuration = bee.maxTripDuration - 1
         var discoveredFlowerPatches = bee.discoveredFlowerPatches
-        var destination = bee.destination
+        var vectorFromColony = (bee.vectorFromColony._1 + moveVectorX, bee.vectorFromColony._2 + moveVectorY)
+
+//        println("[BEE] ", bee, " moving from (",x, y, ") to (", newX, newY, ")")
 
          cell match {
           case BeexploreCell(_, _, flowerPatch) => {
-            if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch)) {
-              discoveredFlowerPatches += flowerPatch -> (newX, newY)
-              if (bee.destination != (-1, -1)
-                && (bee.destination != (config.beeColonyCoordinateX, config.beeColonyCoordinateY) || workerId.value != config.beeColonyWorkerId)
-                && flowerPatch == grid.cells(bee.destination._1)(bee.destination._2).asInstanceOf[BeexploreCell].flowerPatch
-              )
-                destination = (-1, -1)
-//              if (bee.destination == (config.beeColonyCoordinateX, config.beeColonyCoordinateY)
-//              && workerId.value != config.beeColonyWorkerId)
-//                destination = (-1, -1)
-            }
-            if (maxTripDuration == 0) {
-              destination = (config.beeColonyCoordinateX, config.beeColonyCoordinateY)
-            }
+            if (destination == vectorFromColony)
+            // destination found - bee can fly wherever it wants
+              destination = (Int.MinValue, Int.MinValue)
+            if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch))
+              discoveredFlowerPatches += flowerPatch -> vectorFromColony
+            if (maxTripDuration <= 0)
+//              same as negated vectorFromColony (but then desiredMoveCoords wouldn't work)
+              destination = (0, 0)
           }
 
           case BeeColony(_, _, bees, visitedCoords, discoveredFlowerPatchCoords, discoveredFlowerPatchMetrics) => {
@@ -275,16 +274,17 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 
             discoveredFlowerPatches.clear
             maxTripDuration = config.beeTripDuration
+            vectorFromColony = (0, 0)
 
             config.beeSearchMode match {
               case 1 =>
-                destination = (-1, -1)
+                destination = (Int.MinValue, Int.MinValue)
               case 2 => {
                 val possibleDestinations = discoveredFlowerPatchCoords.values.toList
                 if (possibleDestinations.nonEmpty)
                   destination = possibleDestinations(random.nextInt(possibleDestinations.length))
                 else
-                  destination = (-1, -1)
+                  destination = (Int.MinValue, Int.MinValue)
               }
             }
 //            println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics, " bee: ", bee.discoveredFlowerPatches, "destination: ", destination)
@@ -298,7 +298,8 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 //          energy = bee.energy - config.beeMoveCost,
           maxTripDuration,
           discoveredFlowerPatches,
-          destination
+          destination,
+          vectorFromColony
         )
       }
 

@@ -10,7 +10,8 @@ final case class Bee(
                       energy: Energy,
                       maxTripDuration: Long, //lifespan -> maxTripDuration
                       discoveredFlowerPatches: collection.mutable.Map[Id, (Int, Int)],
-                      destination: (Int, Int)
+                      destination: (Int, Int),
+                      vectorFromColony: (Int, Int)
                     )
 
 object Bee {
@@ -20,7 +21,7 @@ object Bee {
     config.beeStartEnergy,
     config.beeTripDuration,
     MMap.empty[Id, (Int, Int)],
-//    (random.nextInt(config.gridSize) - 1, random.nextInt(config.gridSize) - 1)
-    (-1, -1)
+    (Int.MinValue, Int.MinValue), // not real destination - bee can freely fly
+    (0, 0)
   )
 }
