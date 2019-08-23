@@ -80,9 +80,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
       0,
       0,
       0,
-      0,
-      0,
-      0,
       0
     )
     (grid, metrics)
@@ -328,9 +325,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
 
     // TODO: fill metrics
     val metrics = BeexploreMetrics(
-      0,
-      0,
-      0,
       0,
       0,
       0,
