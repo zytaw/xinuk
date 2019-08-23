@@ -34,6 +34,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
       var y = random.nextInt(config.gridSize - 3) + 1
 
       while (grid.cells(x)(y).isInstanceOf[BeeColony]
+        || grid.cells(x)(y).isInstanceOf[BufferCell]
         || grid.cells(x)(y).asInstanceOf[BeexploreCell].flowerPatch != Id.Start
         || grid.cells(x)(y) == Obstacle) {
         print(".")
@@ -57,9 +58,11 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
             newX = x + nextFlower._1
             newY = y + nextFlower._2
 
-            if (grid.cells(newX)(newY)!= Obstacle
-              && !grid.cells(newX)(newY).isInstanceOf[BeeColony]
-              && grid.cells(newX)(newY).asInstanceOf[BeexploreCell].flowerPatch == Id.Start
+            val cell = grid.cells(newX)(newY)
+            if (cell != Obstacle
+              && !cell.isInstanceOf[BufferCell]
+              && !cell.isInstanceOf[BeeColony]
+              && cell.asInstanceOf[BeexploreCell].flowerPatch == Id.Start
             ) {
               grid.cells(newX)(newY) = BeexploreCell(Cell.emptySignal, Vector.empty, Id(i))
               x = newX
@@ -119,7 +122,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)])
       newGrid.cells(x)(y) = newGrid.cells(x)(y) match {
         case cell: BeexploreCell => cell
         case cell: BeeColony => updatedColony(cell)
-        case BufferCell(cell: BeexploreCell) => cell
+        case BufferCell(cell) => BufferCell(cell)
         case Obstacle => Obstacle
       }
     }

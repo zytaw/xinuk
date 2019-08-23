@@ -136,7 +136,11 @@ class WorkerActor[ConfigType <: XinukConfig](
   private def notifyNeighbours(iteration: Long, grid: Grid): Unit = {
     self ! IterationPartFinished(id, id, iteration, Array.empty)
     neighbours.foreach { case (neighbourId, ngh) =>
-      val bufferArray = ngh.position.bufferZone.iterator.map { case (x, y) => grid.cells(x)(y).asInstanceOf[BufferCell] }.toArray
+      val bufferArray = ngh.position.bufferZone.iterator.map {
+        case (x, y) => {
+          grid.cells(x)(y).asInstanceOf[BufferCell]
+        }
+      }.toArray
       regionRef ! IterationPartFinished(id, neighbourId, iteration, bufferArray)
     }
   }
