@@ -7,7 +7,7 @@ import pl.edu.agh.xinuk.model.Energy
 import scala.util.Random
 
 final case class Bee(
-                      energy: Energy,
+                      tripNumber: Int,
                       maxTripDuration: Long, //lifespan -> maxTripDuration
                       discoveredFlowerPatches: collection.mutable.Map[Id, (Int, Int)],
                       destination: (Int, Int),
@@ -18,7 +18,7 @@ object Bee {
 //  private val random = new Random(System.nanoTime())
   def create()(implicit config: BeexploreConfig):
   Bee = Bee(
-    config.beeStartEnergy,
+    1,
     config.beeTripDuration,
     MMap.empty[Id, (Int, Int)],
     (Int.MinValue, Int.MinValue), // not real destination - bee can freely fly

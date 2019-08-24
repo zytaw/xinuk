@@ -20,8 +20,6 @@ ASSV - algae start signal value; ASSV ∈ [0,1] && ASSV ∈ R.
  */
 
 final case class BeexploreConfig(
-                                 beeLifeActivityCost: Energy,
-                                 beeStartEnergy: Energy,
                                  signalSpeedRatio: Int,
                                  signalSuppressionFactor: Double,
                                  signalAttenuationFactor: Double,

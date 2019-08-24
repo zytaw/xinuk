@@ -139,7 +139,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         case BufferCell(BeexploreCell(smell, _, _)) =>
           update(x, y)(cell => cell.copy(smell = cell.smell + smell))
 
-        case BeeColony(_, smell, bees, visitedCoords, discoveredFlowerPatchCoords, _) => {
+        case BeeColony(_, _, bees, _, _, _) => {
           val (newBees: Iterator[Bee], moves: BMap[(Int, Int), Stream[Bee]]) =
             bees.foldLeft(
               (
@@ -241,6 +241,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         val moveVectorX = newX - x
         val moveVectorY = newY - y
 
+        var tripNumber = bee.tripNumber
         var destination = bee.destination
         var maxTripDuration = bee.maxTripDuration - 1
         var discoveredFlowerPatches = bee.discoveredFlowerPatches
@@ -260,18 +261,29 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
               destination = (0, 0)
           }
 
-          case BeeColony(_, _, bees, visitedCoords, discoveredFlowerPatchCoords, discoveredFlowerPatchMetrics) => {
+          case BeeColony(_, _, _, firstTripDetections, discoveredFlowerPatchCoords, discoveredFlowerPatchMetrics) => {
 //            println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
-            //          newest coord for each flowerPatch are kept in BeeColony (since potentially the environment could dynamically change)
+            // flowerPatch detection probabilities on 1st scouting trip
+            if (bee.tripNumber == 1) {
+              for ((id, _) <- bee.discoveredFlowerPatches) {
+                if (firstTripDetections.contains(id))
+                  firstTripDetections(id) = firstTripDetections(id) + 1
+                else
+                  firstTripDetections(id) = 1
+              }
+              firstTripDetections
+            }
+
+            // newest coord for each flowerPatch are kept in BeeColony (since potentially the environment could dynamically change)
             discoveredFlowerPatchCoords ++= bee.discoveredFlowerPatches
             for ((id, _) <- bee.discoveredFlowerPatches) {
-              if (discoveredFlowerPatchMetrics.contains(id)){
+              if (discoveredFlowerPatchMetrics.contains(id))
                 discoveredFlowerPatchMetrics(id) = discoveredFlowerPatchMetrics(id) + 1
-              }
               else
                 discoveredFlowerPatchMetrics(id) = 1
             }
 
+            tripNumber += 1
             discoveredFlowerPatches.clear
             maxTripDuration = config.beeTripDuration
             vectorFromColony = (0, 0)
@@ -287,15 +299,14 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
                   destination = (Int.MinValue, Int.MinValue)
               }
             }
-//            println("--colonyFlowerPatches: ", discoveredFlowerPatchCoords, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics, " bee: ", bee.discoveredFlowerPatches, "destination: ", destination)
+            println("--firstTripDetections: ", firstTripDetections, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics)
           }
 
           case _ =>
         }
 
         bee.copy(
-          energy = bee.energy - config.beeLifeActivityCost,
-//          energy = bee.energy - config.beeMoveCost,
+          tripNumber,
           maxTripDuration,
           discoveredFlowerPatches,
           destination,
