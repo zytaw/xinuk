@@ -13,13 +13,11 @@ object BeexploreMain {
   private val configPrefix = "beexplore"
   private val metricHeaders = Vector(
     "beeCount",
-    "beeTotalTrips",
-    "beeTotalTripDuration",
-    "beeMoves",
     "flowerPatchCount",
-    "exploredFlowerPatchCount",
-    "a",
-    "b"
+    "firstTripFlowerPatchCount",
+    "discoveredFlowerPatchCount",
+    "beeMoves",
+    "beeTrips"
   )
 
   private def cellToColor(cell: BeexploreCell): Color = {
