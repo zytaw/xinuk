@@ -1,10 +1,14 @@
 package pl.edu.agh.beexplore.simulation
 
+import pl.edu.agh.beexplore.model.Id
 import pl.edu.agh.xinuk.simulation.Metrics
+import com.avsystem.commons.MMap
 
-final case class BeexploreMetrics(beeCount: Long,
-                                  flowerPatchCount: Long,
-                                  discoveredFlowerPatchCount: Long,
+
+final case class BeexploreMetrics(beeCount: Int,
+                                  flowerPatchCount: Int,
+                                  firstTripFlowerPatchCount: collection.mutable.Map[Id, (Int, Double)],
+                                  discoveredFlowerPatchCount: collection.mutable.Map[Id, Int],
                                   beeMoves: Long,
                                   beeTrips: Long,
                                   ) extends Metrics {
@@ -14,19 +18,20 @@ final case class BeexploreMetrics(beeCount: Long,
   }
 
   override def series: Vector[(String, Double)] = Vector(
-    "Foraminifera" -> beeCount,
-    "Algae" -> flowerPatchCount
+    "Bees" -> beeCount,
+    "FlowerPatches" -> flowerPatchCount
   )
 
   override def +(other: Metrics): BeexploreMetrics = {
     other match {
       case BeexploreMetrics.EMPTY => this
-      case BeexploreMetrics(otherBeeCount, otherFlowerPatchCount, otherDiscoveredFlowerPatchCount, otherBeeMoves,
+      case BeexploreMetrics(otherBeeCount, otherFlowerPatchCount, _, otherDiscoveredFlowerPatchCount, otherBeeMoves,
       otherBeeTrips) =>
         BeexploreMetrics(
           beeCount + otherBeeCount,
           flowerPatchCount + otherFlowerPatchCount,
-          discoveredFlowerPatchCount + otherDiscoveredFlowerPatchCount,
+          firstTripFlowerPatchCount,
+          discoveredFlowerPatchCount ++ otherDiscoveredFlowerPatchCount,
           beeMoves + otherBeeMoves,
           beeTrips + otherBeeTrips
         )
@@ -37,7 +42,7 @@ final case class BeexploreMetrics(beeCount: Long,
 }
 
 object BeexploreMetrics {
-  private val EMPTY = BeexploreMetrics(0, 0, 0, 0, 0)
+  private val EMPTY = BeexploreMetrics(0, 0, MMap.empty[Id, (Int, Double)], MMap.empty[Id, Int], 0, 0)
 
   def empty(): BeexploreMetrics = EMPTY
 }

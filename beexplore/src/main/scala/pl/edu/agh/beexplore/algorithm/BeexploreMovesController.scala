@@ -80,11 +80,11 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 
     println("grid initialized")
 
-    // TODO: fill metrics
     val metrics = BeexploreMetrics(
-      0,
-      0,
-      0,
+      config.flowerPatchNumber,
+      config.beeNumber,
+      MMap.empty[Id, (Int, Double)],
+      MMap.empty[Id, Int],
       0,
       0
     )
@@ -95,6 +95,11 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 
     this.grid = grid
     val newGrid = Grid.empty(bufferZone, BeexploreCell.create())
+
+    var firstTripFlowerPatchCount = MMap.empty[Id, (Int, Double)]
+    var discoveredFlowerPatchCount = MMap.empty[Id, Int]
+    var beeMoves = 0L
+    var beeTrips = 0L
 
     newGrid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) = grid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) match {
                   case cell: BeeColony => cell.copy(bees = Vector.empty)
@@ -165,7 +170,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         }
 
         case BeexploreCell(smell, bees, flowerPatch) => {
-          val (newBees: Iterator[Bee], moves: BMap[(Int, Int), Stream[Bee]], newFlowerPatch:Id) =
+          val (newBees: Iterator[Bee], moves: BMap[(Int, Int), Stream[Bee]], _) =
             bees.foldLeft(
               (
                 Iterator[Bee](),
@@ -246,6 +251,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         var maxTripDuration = bee.maxTripDuration - 1
         var discoveredFlowerPatches = bee.discoveredFlowerPatches
         var vectorFromColony = (bee.vectorFromColony._1 + moveVectorX, bee.vectorFromColony._2 + moveVectorY)
+        beeMoves += 1
 
 //        println("[BEE] ", bee, " moving from (",x, y, ") to (", newX, newY, ")")
 
@@ -266,12 +272,16 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
             // flowerPatch detection probabilities on 1st scouting trip
             if (bee.tripNumber == 1) {
               for ((id, _) <- bee.discoveredFlowerPatches) {
+                val discoveredFlowerPatchDistance = math.sqrt(math.pow(bee.discoveredFlowerPatches(id)._1, 2) + math.pow(bee.discoveredFlowerPatches(id)._2, 2))
                 if (firstTripDetections.contains(id))
-                  firstTripDetections(id) = firstTripDetections(id) + 1
+                  if (firstTripDetections(id)._2 > discoveredFlowerPatchDistance)
+                    firstTripDetections(id) = (firstTripDetections(id)._1 + 1, discoveredFlowerPatchDistance)
+                  else
+                    firstTripDetections(id) = (firstTripDetections(id)._1 + 1, firstTripDetections(id)._2)
                 else
-                  firstTripDetections(id) = 1
+                  firstTripDetections(id) = (1, discoveredFlowerPatchDistance)
               }
-              firstTripDetections
+              firstTripFlowerPatchCount = firstTripDetections
             }
 
             // newest coord for each flowerPatch are kept in BeeColony (since potentially the environment could dynamically change)
@@ -300,6 +310,10 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
               }
             }
             println("--firstTripDetections: ", firstTripDetections, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics)
+            if (beeTrips < tripNumber)
+              beeTrips = tripNumber
+            discoveredFlowerPatchCount = discoveredFlowerPatchMetrics
+
           }
 
           case _ =>
@@ -321,35 +335,18 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       BeeAction(Iterator.empty, moves = destination)
     }
 
-
-    // TODO: gather metrics like below:
-//    for {
-//      x <- 0 until config.gridSize
-//      y <- 0 until config.gridSize
-//    } {
-//      this.grid.cells(x)(y) match {
-//        case BeexploreCell(_, bees, flowerPatch) =>
-//          foraminiferaTotalEnergy += bees.iterator.map(_.energy.value).sum
-//          beeCount += bees.size
-//        case BufferCell(BeexploreCell(_, foraminiferas, algae)) =>
-//          foraminiferaTotalEnergy += foraminiferas.iterator.map(_.energy.value).sum
-//          foraminiferaCount += foraminiferas.size
-//        case _ =>
-//      }
-//    }
-
     for {
       x <- 0 until config.gridSize
       y <- 0 until config.gridSize
     } calculateCell(x, y)
 
-    // TODO: fill metrics
     val metrics = BeexploreMetrics(
-      0,
-      0,
-      0,
-      0,
-      0
+      beeCount = config.beeNumber,
+      flowerPatchCount = config.flowerPatchNumber,
+      firstTripFlowerPatchCount = firstTripFlowerPatchCount,
+      discoveredFlowerPatchCount = discoveredFlowerPatchCount,
+      beeMoves = beeMoves,
+      beeTrips = beeTrips,
     )
 
     (newGrid, metrics)

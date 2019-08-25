@@ -9,7 +9,7 @@ final case class BeeColony(
                             coordinates: (Int, Int),
                             smell: SmellArray,
                             bees: Vector[Bee],
-                            firstTripDetections: collection.mutable.Map[Id, Int],
+                            firstTripDetections: collection.mutable.Map[Id, (Int, Double)],
                             discoveredFlowerPatchCoords: collection.mutable.Map[Id, (Int, Int)],
                             discoveredFlowerPatchMetrics: collection.mutable.Map[Id, Int]
                           ) extends SmellingCell {
@@ -26,7 +26,7 @@ object BeeColony {
     (config.beeColonyCoordinateX, config.beeColonyCoordinateY),
     Cell.emptySignal,
     bees,
-    MMap.empty[Id, Int],
+    MMap.empty[Id, (Int, Double)],
     MMap.empty[Id, (Int, Int)],
     MMap.empty[Id, Int]
   )
