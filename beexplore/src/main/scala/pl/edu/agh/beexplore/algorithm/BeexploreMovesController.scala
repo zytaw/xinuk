@@ -44,24 +44,24 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 
     if (config.flowerPatchesFromFile) {
 //      val img = ImageIO.read(new File("~/Desktop/PRIVATE/master-thesis/papers/scout/map.png"))
-      val img = ImageIO.read(new File("map100x100.png"))
+      val img = ImageIO.read(new File("map-adjusted.png"))
 
       val w = img.getWidth
       val h = img.getHeight
 
       val flowerPatchColor = new Color(53, 96, 232)
 
-//      var imgFlowerPatch = ofDim[Boolean](w, h)
-//
-//      val out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
-//      for (x <- 0 until w) {
-//        for (y <- 0 until h) {
-//          val c = new Color(img.getRGB(x, y))
-//          if (c == flowerPatchColor) {
-//            imgFlowerPatch(x)(y) = true
-//          }
-//        }
-//      }
+      var imgFlowerPatch = ofDim[Boolean](w, h)
+
+      val out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
+      for (x <- 0 until w) {
+        for (y <- 0 until h) {
+          val c = new Color(img.getRGB(x, y))
+          if (c == flowerPatchColor) {
+            imgFlowerPatch(x)(y) = true
+          }
+        }
+      }
 //      ImageIO.write(out, "jpg", new File("test_bettermap.jpg"))
 
       var colonyNotSet = true
@@ -69,8 +69,8 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       for (x <- 0 until w) {
         for (y <- 0 until h){
           val c = new Color(img.getRGB(y, x))
-          if (x > 0 && y > 0 && x < w-1 && y < h-1 && c == flowerPatchColor) {
-//          if (x > 0 && y > 0 && x < w-1 && y < h-1 && imgFlowerPatch(y)(x)) {
+//          if (x > 0 && y > 0 && x < w-1 && y < h-1 && c == flowerPatchColor) {
+          if (x > 0 && y > 0 && x < w-1 && y < h-1 && imgFlowerPatch(y)(x)) {
             val neighbourCellCoordinates = Grid.neighbourCellCoordinates(x, y)
             val flowerPatchId: Int = neighbourCellCoordinates
               .map {
@@ -83,8 +83,15 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
                 println("...")
                 cell.flowerPatch.value
               case Opt.Empty => {
-                newFlowerPatchId += 1
-                newFlowerPatchId
+//                if (x > 1 && y > 1 && neighbourCellCoordinates.exists {
+//                    case (i, j) => imgFlowerPatch(i)(j)
+//                  })
+//                    newFlowerPatchId
+//                else {
+                  newFlowerPatchId += 1
+                  newFlowerPatchId
+//                }
+
               }
             }
             grid.cells(x)(y) = BeexploreCell(Cell.emptySignal + config.flowerPatchSignalMultiplier, Vector.empty, Id(flowerPatchId))
