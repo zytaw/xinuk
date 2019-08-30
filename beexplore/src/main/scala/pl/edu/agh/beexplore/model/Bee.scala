@@ -11,7 +11,8 @@ final case class Bee(
                       maxTripDuration: Long, //lifespan -> maxTripDuration
                       discoveredFlowerPatches: collection.mutable.Map[Id, (Int, Int)],
                       destination: (Int, Int),
-                      vectorFromColony: (Int, Int)
+                      vectorFromColony: (Int, Int),
+                      lastMoveVector: (Int, Int)
                     )
 
 object Bee {
@@ -22,6 +23,7 @@ object Bee {
     config.beeTripDuration,
     MMap.empty[Id, (Int, Int)],
     (Int.MinValue, Int.MinValue), // not real destination - bee can freely fly
+    (0, 0),
     (0, 0)
   )
 }

@@ -44,7 +44,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 
     if (config.flowerPatchesFromFile) {
 //      val img = ImageIO.read(new File("~/Desktop/PRIVATE/master-thesis/papers/scout/map.png"))
-      val img = ImageIO.read(new File("map-adjusted.png"))
+      val img = ImageIO.read(new File("map350.png"))
 
       val w = img.getWidth
       val h = img.getHeight
@@ -80,7 +80,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
               .iterator
               .nextOpt match {
               case Opt(cell: BeexploreCell) =>
-                println("...")
                 cell.flowerPatch.value
               case Opt.Empty => {
 //                if (x > 1 && y > 1 && neighbourCellCoordinates.exists {
@@ -98,6 +97,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
           }
           if (colonyNotSet && c == new Color(255, 0, 0)) {
             grid.cells(x)(y) = BeeColony.create(Vector.fill(config.beeNumber)(Bee.create()))
+            println("beecolony coords ", x, y)
             colonyNotSet = false
           }
         }
@@ -343,13 +343,59 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       (newX, newY)
     }
 
+    def turningAnglesCoords (x: Int, y: Int, lastMoveVector: (Int, Int)): (Int, Int) = {
+      val turningVector = random.nextInt(214) match {
+        case x if 0 until 58 contains x =>
+          (0, 1) //prosto
+        case x if 58 until 97 contains x =>
+          (1, 1) //(-1, 1) // 45 stopni
+        case x if 97 until 133 contains x =>
+          (1, 0) //(-1, 0) // 90 stopni
+        case x if 133 until 178 contains x =>
+          (1, -1) //(-1, -1) // 135 stopni
+        case x if 178 until 214 contains x =>
+          (0, -1) // 180 stopni - zawroc
+      }
+
+      val (newX, newY) = lastMoveVector match {
+        case (0, 1) =>
+          (x + turningVector._1, y + turningVector._2)
+        case (1, 0) =>
+          (x + turningVector._2, y - turningVector._1)
+        case (0, -1) =>
+          (x - turningVector._1, y - turningVector._2)
+        case (-1, 0) =>
+          (x - turningVector._2, y + turningVector._1)
+        case (1, 1) =>
+          (x + math.signum(turningVector._1 + turningVector._2), y + math.signum(turningVector._2 - turningVector._1))
+        case (-1, -1) =>
+          (x - math.signum(turningVector._1 + turningVector._2), y - math.signum(turningVector._2 - turningVector._1))
+        case (1, -1) =>
+          (x + math.signum(turningVector._2 - turningVector._1), y - math.signum(turningVector._1 + turningVector._2))
+        case (-1, 1) =>
+          (x - math.signum(turningVector._1 + turningVector._2), y + math.signum(turningVector._2 - turningVector._1))
+        case (_, _) =>
+          (x, y)
+      }
+
+      if (grid.cells(newX)(newY) == Obstacle)
+        (x, y)
+      else
+        (newX, newY)
+    }
+
+
     def moveBee(bee: Bee, x: Int, y: Int, moves: BMap[(Int, Int), Stream[Bee]]): BeeAction = {
 
       val (newX, newY) = bee.destination match {
         case (Int.MinValue, Int.MinValue) =>
-//          without smell
-          randomMoveCoords(x, y)
-//          smellBasedMoveCoords(x, y, moves)
+          if (config.signalSpeedRatio > 0)
+            smellBasedMoveCoords(x, y, moves)
+          else if (bee.lastMoveVector == (0, 0))
+            randomMoveCoords(x, y)  // without smell
+          else
+            turningAnglesCoords(x, y, bee.lastMoveVector)
+
         case _ =>
           desiredMoveCoords(x, y, bee.destination, bee.vectorFromColony)
       }
@@ -364,6 +410,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         var discoveredFlowerPatches = bee.discoveredFlowerPatches
         var vectorFromColony = (bee.vectorFromColony._1 + moveVectorX, bee.vectorFromColony._2 + moveVectorY)
         beeMoves += 1
+        var lastMoveVector = (moveVectorX, moveVectorY)
 
 //        println("[BEE] ", bee, " moving from (",x, y, ") to (", newX, newY, ")")
 
@@ -436,7 +483,8 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
           maxTripDuration,
           discoveredFlowerPatches,
           destination,
-          vectorFromColony
+          vectorFromColony,
+          lastMoveVector
         )
       }
 
