@@ -326,15 +326,12 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         newX = x
         newY = y
       }
-//      else if (newX == 0 && newY == 0) {
-//        newX = 1
-//        newY = 1
-//      }
-      else if (newX == config.beeColonyCoordinateX && newY == config.beeColonyCoordinateY){
+
+      if (newX == config.beeColonyCoordinateX && newY == config.beeColonyCoordinateY){
         randomMoveCoords(x, y)
       }
-
-      (newX, newY)
+      else
+        (newX, newY)
     }
 
     def desiredMoveCoords (x: Int, y: Int, destination: (Int, Int), vectorFromColony: (Int, Int)): (Int, Int) = {
