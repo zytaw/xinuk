@@ -63,6 +63,25 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       }
 //      ImageIO.write(out, "jpg", new File("test_bettermap.jpg"))
 
+      def processNeighbourFlowerPatches (x: Int, y: Int, id: Int): Unit = {
+        if (imgFlowerPatch(y)(x)) {
+          val neighbourCellCoordinates = Grid.neighbourCellCoordinates(x, y)
+          imgFlowerPatch(y)(x) = false
+          grid.cells(x)(y) = BeexploreCell(Cell.emptySignal + config.flowerPatchSignalMultiplier, Vector.empty, Id(id))
+          val neighboursToProcess = neighbourCellCoordinates
+            .map {
+              case (i, j) => (grid.cells(i)(j), i, j)
+            }
+            .filter(_._1 != Obstacle)
+            .filter(r => imgFlowerPatch(r._3)(r._2))
+            .foreach {
+//              case null => println("ok")
+              case (_, i, j) =>
+                processNeighbourFlowerPatches(i, j, id)
+            }
+        }
+      }
+
       var colonyNotSet = true
       var newFlowerPatchId = -1
       for (x <- 0 until w) {
@@ -70,29 +89,8 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
           val c = new Color(img.getRGB(y, x))
 //          if (x > 0 && y > 0 && x < w-1 && y < h-1 && c == flowerPatchColor) {
           if (x > 0 && y > 0 && x < w-1 && y < h-1 && imgFlowerPatch(y)(x)) {
-            val neighbourCellCoordinates = Grid.neighbourCellCoordinates(x, y)
-            val flowerPatchId: Int = neighbourCellCoordinates
-              .map {
-                case (i, j) => grid.cells(i)(j)
-              }.filter(_ != Obstacle)
-              .filter(_.asInstanceOf[BeexploreCell].flowerPatch != Id.Start)
-              .iterator
-              .nextOpt match {
-              case Opt(cell: BeexploreCell) =>
-                cell.flowerPatch.value
-              case Opt.Empty => {
-//                if (x > 1 && y > 1 && neighbourCellCoordinates.exists {
-//                    case (i, j) => imgFlowerPatch(i)(j)
-//                  })
-//                    newFlowerPatchId
-//                else {
-                  newFlowerPatchId += 1
-                  newFlowerPatchId
-//                }
-
-              }
-            }
-            grid.cells(x)(y) = BeexploreCell(Cell.emptySignal + config.flowerPatchSignalMultiplier, Vector.empty, Id(flowerPatchId))
+            newFlowerPatchId += 1
+            processNeighbourFlowerPatches(x, y, newFlowerPatchId)
           }
           if (colonyNotSet && c == new Color(255, 0, 0)) {
             grid.cells(x)(y) = BeeColony.create(Vector.fill(config.beeNumber)(Bee.create()))
