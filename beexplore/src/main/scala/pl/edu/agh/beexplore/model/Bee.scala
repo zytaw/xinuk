@@ -12,7 +12,8 @@ final case class Bee(
                       discoveredFlowerPatches: collection.mutable.Map[Id, (Int, Int)],
                       destination: (Int, Int),
                       vectorFromColony: (Int, Int),
-                      lastMoveVector: (Int, Int)
+                      lastMoveVector: (Int, Int),
+                      randomStepsLeft: Int
                     )
 
 object Bee {
@@ -24,6 +25,7 @@ object Bee {
     MMap.empty[Id, (Int, Int)],
     (Int.MinValue, Int.MinValue), // not real destination - bee can freely fly
     (0, 0),
-    (Int.MinValue, Int.MinValue)
+    (Int.MinValue, Int.MinValue),
+    0
   )
 }

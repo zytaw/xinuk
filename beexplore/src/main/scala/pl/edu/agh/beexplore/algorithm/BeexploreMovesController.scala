@@ -305,7 +305,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         .iterator
         .map { case (_, idx) =>
           val (i, j) = neighbourCellCoordinates(idx)
-//          println((i, j, grid.cells(i)(j)))
           (i, j, grid.cells(i)(j))
         }
         .filter(_._3 != Obstacle)
@@ -315,7 +314,10 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
           case Opt.Empty =>
             (x, y)
         }
-      destination
+      if (destination._1 == config.beeColonyCoordinateX && destination._2 == config.beeColonyCoordinateY)
+          randomMoveCoords(x, y)
+      else
+          destination
     }
 
     def randomMoveCoords (x: Int, y: Int): (Int, Int) = {
@@ -379,7 +381,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       }
 
       if (grid.cells(newX)(newY) == Obstacle || (newX == config.beeColonyCoordinateX && newY == config.beeColonyCoordinateY)) {
-//        println("smutno mi ", turningVector, lastMoveVector)
         (x, y)
       }
       else
@@ -391,7 +392,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 
       val (newX, newY) = bee.destination match {
         case (Int.MinValue, Int.MinValue) =>
-          if (config.signalSpeedRatio > 0)
+          if (config.signalSpeedRatio > 0 && bee.randomStepsLeft == 0)
             smellBasedMoveCoords(x, y, moves)
           else if (bee.lastMoveVector == (Int.MinValue, Int.MinValue))
             randomMoveCoords(x, y)  // without smell
@@ -413,6 +414,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         var vectorFromColony = (bee.vectorFromColony._1 + moveVectorX, bee.vectorFromColony._2 + moveVectorY)
         beeMoves += 1
         val lastMoveVector = (moveVectorX, moveVectorY)
+        var randomStepsLeft = math.max(bee.randomStepsLeft - 1, 0)
 
 //        println("[BEE] ", bee, " moving from (",x, y, ") to (", newX, newY, ")")
 
@@ -421,8 +423,11 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
             if (destination == vectorFromColony)
             // destination found - bee can fly wherever it wants
               destination = (Int.MinValue, Int.MinValue)
-            if (flowerPatch != Id.Start && !bee.discoveredFlowerPatches.contains(flowerPatch))
-              discoveredFlowerPatches += flowerPatch -> vectorFromColony
+            if (flowerPatch != Id.Start){
+              randomStepsLeft = config.stepsWithNoSmellAfterPatchDiscovery
+              if (!bee.discoveredFlowerPatches.contains(flowerPatch))
+                discoveredFlowerPatches += flowerPatch -> vectorFromColony
+            }
             if (maxTripDuration <= 0)
 //              same as negated vectorFromColony (but then desiredMoveCoords wouldn't work)
               destination = (0, 0)
@@ -432,7 +437,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 //            println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
             // flowerPatch detection probabilities on 1st scouting trip
             if (bee.tripNumber == 1) {
-              println("[BEE]", bee)
+//              println("[BEE]", bee)
               for ((id, _) <- bee.discoveredFlowerPatches) {
                 val discoveredFlowerPatchDistance = math.sqrt(math.pow(bee.discoveredFlowerPatches(id)._1, 2) + math.pow(bee.discoveredFlowerPatches(id)._2, 2))
                 if (firstTripDetections.contains(id))
@@ -487,7 +492,8 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
           discoveredFlowerPatches,
           destination,
           vectorFromColony,
-          lastMoveVector
+          lastMoveVector,
+          randomStepsLeft
         )
       }
 
