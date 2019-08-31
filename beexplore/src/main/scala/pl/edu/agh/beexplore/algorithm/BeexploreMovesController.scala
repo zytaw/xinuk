@@ -43,7 +43,6 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 //    }
 
     if (config.flowerPatchesFromFile) {
-//      val img = ImageIO.read(new File("~/Desktop/PRIVATE/master-thesis/papers/scout/map.png"))
       val img = ImageIO.read(new File("map350.png"))
 
       val w = img.getWidth
@@ -329,9 +328,12 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         newX = x
         newY = y
       }
-      else if (newX == 0 && newY == 0) {
-        newX = 1
-        newY = 1
+//      else if (newX == 0 && newY == 0) {
+//        newX = 1
+//        newY = 1
+//      }
+      else if (newX == config.beeColonyCoordinateX && newY == config.beeColonyCoordinateY){
+        randomMoveCoords(x, y)
       }
 
       (newX, newY)
@@ -344,20 +346,21 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
     }
 
     def turningAnglesCoords (x: Int, y: Int, lastMoveVector: (Int, Int)): (Int, Int) = {
+
       val turningVector = random.nextInt(214) match {
         case x if 0 until 58 contains x =>
-          (0, 1) //prosto
+          (0, 1) //fly straight
         case x if 58 until 97 contains x =>
-          (1, 1) //(-1, 1) // 45 stopni
+          (1, 1) // 45 degrees
         case x if 97 until 133 contains x =>
-          (1, 0) //(-1, 0) // 90 stopni
+          (1, 0) // 90 degrees
         case x if 133 until 178 contains x =>
-          (1, -1) //(-1, -1) // 135 stopni
+          (1, -1) // 135 degrees
         case x if 178 until 214 contains x =>
-          (0, -1) // 180 stopni - zawroc
+          (0, -1) // 180 degrees - turn around
       }
 
-      val (newX, newY) = lastMoveVector match {
+      val (newX, newY) = (lastMoveVector._1, lastMoveVector._2 * -1) match {
         case (0, 1) =>
           (x + turningVector._1, y + turningVector._2)
         case (1, 0) =>
@@ -374,12 +377,16 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
           (x + math.signum(turningVector._2 - turningVector._1), y - math.signum(turningVector._1 + turningVector._2))
         case (-1, 1) =>
           (x - math.signum(turningVector._1 + turningVector._2), y + math.signum(turningVector._2 - turningVector._1))
+        case (0, 0) =>
+          (x + turningVector._1, y + turningVector._2)
         case (_, _) =>
           (x, y)
       }
 
-      if (grid.cells(newX)(newY) == Obstacle)
+      if (grid.cells(newX)(newY) == Obstacle || (newX == config.beeColonyCoordinateX && newY == config.beeColonyCoordinateY)) {
+//        println("smutno mi ", turningVector, lastMoveVector)
         (x, y)
+      }
       else
         (newX, newY)
     }
@@ -391,7 +398,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         case (Int.MinValue, Int.MinValue) =>
           if (config.signalSpeedRatio > 0)
             smellBasedMoveCoords(x, y, moves)
-          else if (bee.lastMoveVector == (0, 0))
+          else if (bee.lastMoveVector == (Int.MinValue, Int.MinValue))
             randomMoveCoords(x, y)  // without smell
           else
             turningAnglesCoords(x, y, bee.lastMoveVector)
@@ -410,7 +417,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         var discoveredFlowerPatches = bee.discoveredFlowerPatches
         var vectorFromColony = (bee.vectorFromColony._1 + moveVectorX, bee.vectorFromColony._2 + moveVectorY)
         beeMoves += 1
-        var lastMoveVector = (moveVectorX, moveVectorY)
+        val lastMoveVector = (moveVectorX, moveVectorY)
 
 //        println("[BEE] ", bee, " moving from (",x, y, ") to (", newX, newY, ")")
 
@@ -430,6 +437,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
 //            println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
             // flowerPatch detection probabilities on 1st scouting trip
             if (bee.tripNumber == 1) {
+              println("[BEE]", bee)
               for ((id, _) <- bee.discoveredFlowerPatches) {
                 val discoveredFlowerPatchDistance = math.sqrt(math.pow(bee.discoveredFlowerPatches(id)._1, 2) + math.pow(bee.discoveredFlowerPatches(id)._2, 2))
                 if (firstTripDetections.contains(id))

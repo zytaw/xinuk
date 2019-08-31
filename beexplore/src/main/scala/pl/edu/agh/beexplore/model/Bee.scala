@@ -24,6 +24,6 @@ object Bee {
     MMap.empty[Id, (Int, Int)],
     (Int.MinValue, Int.MinValue), // not real destination - bee can freely fly
     (0, 0),
-    (0, 0)
+    (Int.MinValue, Int.MinValue)
   )
 }
