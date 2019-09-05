@@ -33,22 +33,31 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
     println("[WORKER INIT] ", workerId)
     grid = Grid.empty(bufferZone, BeexploreCell(Cell.emptySignal, Vector.empty, Id.Start))
 
-//    def similarTo(c: Color, flowerPatchColor: Color) = {
-//      val distance = (c.getRed - flowerPatchColor.getRed) * (c.getRed - flowerPatchColor.getRed)
-//      + (c.getGreen - flowerPatchColor.getGreen) * (c.getGreen - flowerPatchColor.getGreen)
-//      + (c.getBlue - flowerPatchColor.getBlue) * (c.getBlue - flowerPatchColor.getBlue)
-//
-//      if (distance < 10) true
-//      else false
-//    }
+    def colorDistance (c: Color, flowerPatchColor: Color): Double = {
+      (c.getRed - flowerPatchColor.getRed) * (c.getRed - flowerPatchColor.getRed)
+      + (c.getGreen - flowerPatchColor.getGreen) * (c.getGreen - flowerPatchColor.getGreen)
+      + (c.getBlue - flowerPatchColor.getBlue) * (c.getBlue - flowerPatchColor.getBlue)
+    }
+
+    def similarTo(c: Color, flowerPatchColor: Color) = {
+      val distance = colorDistance(c, flowerPatchColor)
+      if (distance < 1500) true
+      else false
+    }
 
     if (config.flowerPatchesFromFile) {
-      val img = ImageIO.read(new File("map350.png"))
+//      val img = ImageIO.read(new File("map350.png"))
+      val img = ImageIO.read(new File("map_big.png"))
 
       val w = img.getWidth
       val h = img.getHeight
 
-      val flowerPatchColor = new Color(53, 96, 232)
+//      val flowerPatchColor = new Color(53, 96, 232)
+
+      val red = new Color(255, 0, 0)
+      val yellow = new Color(255, 250, 88)
+      val blue = new Color(0, 101, 248)
+      val white = new Color(255, 255, 255)
 
       var imgFlowerPatch = ofDim[Boolean](w, h)
 
@@ -56,8 +65,13 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       for (x <- 0 until w) {
         for (y <- 0 until h) {
           val c = new Color(img.getRGB(x, y))
-          if (c == flowerPatchColor) {
+//          if (c == flowerPatchColor) {
+          if (colorDistance(c, white) < 1)
+            imgFlowerPatch(x)(y) = false
+          else if (similarTo(c, red) || similarTo(c, blue) || similarTo(c, yellow)) {
             imgFlowerPatch(x)(y) = true
+            if (colorDistance(c, yellow) > colorDistance(c, white))
+              imgFlowerPatch(x)(y) = false
           }
         }
       }
@@ -92,11 +106,12 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
             newFlowerPatchId += 1
             processNeighbourFlowerPatches(x, y, newFlowerPatchId)
           }
-          if (colonyNotSet && c == new Color(255, 0, 0)) {
-            grid.cells(x)(y) = BeeColony.create(Vector.fill(config.beeNumber)(Bee.create()))
-            println("beecolony coords ", x, y)
-            colonyNotSet = false
-          }
+//          if (colonyNotSet && c == new Color(255, 0, 0)) {
+//            grid.cells(x)(y) = BeeColony.create(Vector.fill(config.beeNumber)(Bee.create()))
+//            println("beecolony coords ", x, y)
+//            colonyNotSet = false
+//          }
+          grid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) = BeeColony.create(Vector.fill(config.beeNumber)(Bee.create()))
         }
       }
 
@@ -163,7 +178,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       config.flowerPatchNumber,
       config.beeNumber,
       MMap.empty[Id, (Int, Double)],
-      MMap.empty[Id, Int],
+      MMap.empty[Id, (Int, Double)],
       0,
       0
     )
@@ -176,9 +191,10 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
     val newGrid = Grid.empty(bufferZone, BeexploreCell.create())
 
     var firstTripFlowerPatchCount = MMap.empty[Id, (Int, Double)]
-    var discoveredFlowerPatchCount = MMap.empty[Id, Int]
+    var discoveredFlowerPatchCount = MMap.empty[Id, (Int, Double)]
     var beeMoves = 0L
     var beeTrips = 0L
+//    var returningBees = 0L
 
     newGrid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) = grid.cells(config.beeColonyCoordinateX)(config.beeColonyCoordinateY) match {
                   case cell: BeeColony => cell.copy(bees = Vector.empty)
@@ -225,7 +241,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
         case BufferCell(BeexploreCell(smell, _, _)) =>
           update(x, y)(cell => cell.copy(smell = cell.smell + smell))
 
-        case BeeColony(_, _, bees, _, _, _) => {
+        case BeeColony(_, _, bees, _, _, _, _) => {
           val (newBees: Iterator[Bee], moves: BMap[(Int, Int), Stream[Bee]]) =
             bees.foldLeft(
               (
@@ -330,6 +346,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
       }
 
       if (newX == config.beeColonyCoordinateX && newY == config.beeColonyCoordinateY){
+//        println("pszczola losuje again")
         randomMoveCoords(x, y)
       }
       else
@@ -433,7 +450,7 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
               destination = (0, 0)
           }
 
-          case BeeColony(_, _, _, firstTripDetections, discoveredFlowerPatchCoords, discoveredFlowerPatchMetrics) => {
+          case BeeColony(_, _, _, firstTripDetections, discoveredFlowerPatchCoords, discoveredFlowerPatchMetrics, returningBees) => {
 //            println("bee in colony, discovered FlowerPatches: ", bee.discoveredFlowerPatches)
             // flowerPatch detection probabilities on 1st scouting trip
             if (bee.tripNumber == 1) {
@@ -449,15 +466,20 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
                   firstTripDetections(id) = (1, discoveredFlowerPatchDistance)
               }
               firstTripFlowerPatchCount = firstTripDetections
+              if (!returningBees.contains(0))
+                returningBees(0) = 0
             }
 
+            returningBees(0) += 1
             // newest coord for each flowerPatch are kept in BeeColony (since potentially the environment could dynamically change)
             discoveredFlowerPatchCoords ++= bee.discoveredFlowerPatches
             for ((id, _) <- bee.discoveredFlowerPatches) {
+              val discoveredFlowerPatchDistance = math.sqrt(math.pow(bee.discoveredFlowerPatches(id)._1, 2) + math.pow(bee.discoveredFlowerPatches(id)._2, 2))
+
               if (discoveredFlowerPatchMetrics.contains(id))
-                discoveredFlowerPatchMetrics(id) = discoveredFlowerPatchMetrics(id) + 1
+                discoveredFlowerPatchMetrics(id) = ((discoveredFlowerPatchMetrics(id)._1 + 1), discoveredFlowerPatchDistance)
               else
-                discoveredFlowerPatchMetrics(id) = 1
+                discoveredFlowerPatchMetrics(id) = (1, discoveredFlowerPatchDistance)
             }
 
             tripNumber += 1
@@ -466,8 +488,10 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
             vectorFromColony = (0, 0)
 
             config.beeSearchMode match {
+//              colony
               case 1 =>
                 destination = (Int.MinValue, Int.MinValue)
+//              knownFlowerPatch(recruitment)
               case 2 => {
                 val possibleDestinations = discoveredFlowerPatchCoords.values.toList
                 if (possibleDestinations.nonEmpty)
@@ -475,8 +499,15 @@ class BeexploreMovesController(bufferZone: TreeSet[(Int, Int)], workerId: Worker
                 else
                   destination = (Int.MinValue, Int.MinValue)
               }
+//              randomLocation
+              case 3 =>
+                destination = (random.nextInt(config.gridSize - 1), random.nextInt(config.gridSize - 1))
             }
-            println("--firstTripDetections: ", firstTripDetections, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics)
+//            println("--firstTripDetections: ", firstTripDetections)
+
+//            println("--firstTripDetections: ", firstTripDetections, "discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics, returningBees)
+            println("discoveredFlowerPatchMetrics: ", discoveredFlowerPatchMetrics, "returnedBees: ", returningBees)
+
             if (beeTrips < tripNumber)
               beeTrips = tripNumber
             discoveredFlowerPatchCount = discoveredFlowerPatchMetrics

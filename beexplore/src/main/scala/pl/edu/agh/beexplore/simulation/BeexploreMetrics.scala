@@ -8,7 +8,7 @@ import com.avsystem.commons.MMap
 final case class BeexploreMetrics(beeCount: Int,
                                   flowerPatchCount: Int,
                                   firstTripFlowerPatchCount: collection.mutable.Map[Id, (Int, Double)],
-                                  discoveredFlowerPatchCount: collection.mutable.Map[Id, Int],
+                                  discoveredFlowerPatchCount: collection.mutable.Map[Id, (Int, Double)],
                                   beeMoves: Long,
                                   beeTrips: Long,
                                   ) extends Metrics {
@@ -42,7 +42,7 @@ final case class BeexploreMetrics(beeCount: Int,
 }
 
 object BeexploreMetrics {
-  private val EMPTY = BeexploreMetrics(0, 0, MMap.empty[Id, (Int, Double)], MMap.empty[Id, Int], 0, 0)
+  private val EMPTY = BeexploreMetrics(0, 0, MMap.empty[Id, (Int, Double)], MMap.empty[Id, (Int, Double)], 0, 0)
 
   def empty(): BeexploreMetrics = EMPTY
 }
